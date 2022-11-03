@@ -6,12 +6,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/yuin/goldmark"
 )
 
 type Time time.Time
@@ -59,7 +60,7 @@ func initArticlesAndImages(dir string) (Articles, map[string]string, error) {
 	return articles, shortUrlMap, nil
 }
 
-func ArticleSearch(articles *Articles, search string, category string) Articles {
+func ArticleSearch(articles *Articles, search, category, tag string) Articles {
 
 	var articleList Articles
 	for _, article := range *articles {
@@ -71,6 +72,15 @@ func ArticleSearch(articles *Articles, search string, category string) Articles 
 		}
 		if category != "" && strings.Index(article.Category, category) == -1 {
 			pass = false
+		}
+		if tag != "" {
+			pass = false
+			for _, tagItem := range article.Tags {
+				if strings.Index(tagItem, tag) != -1 {
+					pass = true
+					break
+				}
+			}
 		}
 		if pass {
 			articleList = append(articleList, article)
@@ -114,13 +124,11 @@ func RecursiveReadArticles(dir string) (Articles, error) {
 				return articles, err
 			}
 			articles = append(articles, article)
-		} else if
-		strings.HasSuffix(upperName, ".PNG") ||
+		} else if strings.HasSuffix(upperName, ".PNG") ||
 			strings.HasSuffix(upperName, ".GIF") ||
 			strings.HasSuffix(upperName, ".JPG") {
 
 			dst := config.Cfg.CurrentDir + "/images/" + name
-			fmt.Println(utils.IsFile(dst))
 			if !utils.IsFile(dst) {
 				_, _ = utils.CopyFile(path, dst)
 			}
@@ -169,7 +177,7 @@ func readMarkdown(path string) (Article, ArticleDetail, error) {
 	article.Title = strings.TrimSuffix(strings.ToUpper(mdFile.Name()), ".MD")
 	article.Date = Time(mdFile.ModTime())
 
-	if ! bytes.HasPrefix(markdown, []byte("```json")) {
+	if !bytes.HasPrefix(markdown, []byte("```json")) {
 		article.Description = cropDesc(markdown)
 		articleDetail.Article = article
 		articleDetail.Body = string(markdown)
@@ -190,7 +198,14 @@ func readMarkdown(path string) (Article, ArticleDetail, error) {
 	article.Title = strings.ToUpper(article.Title)
 
 	articleDetail.Article = article
-	articleDetail.Body = string(markdownArrInfo[1])
+
+	var buf bytes.Buffer
+	if err := goldmark.Convert(markdownArrInfo[1], &buf); err != nil {
+		article.Title = "文章[" + article.Title + "]解析 markdown 出错，请检查。"
+		return article, articleDetail, nil
+	}
+
+	articleDetail.Body = buf.String()
 	return article, articleDetail, nil
 }
 

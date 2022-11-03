@@ -12,7 +12,6 @@
     <style>:root{--primary: {{ .Config.ThemeColor }}}</style>
     <link rel="stylesheet" href="/public/css/prism.css">
     <link rel="stylesheet" href="/public/css/app.css">
-    <script src="/public/js/marked.min.js"></script>
     <script>
         function obj2StrParams(obj,firstStr = '?') {
             let params = firstStr;
@@ -46,6 +45,7 @@
             <div class="nav">
                 <a href="/blog">Blog</a>
                 <a href="/categories">Categories</a>
+                <a href="/tags">Tags</a>
                 {{range $nav :=  .Navs }}
                     <a href="/extra-nav?name={{ $nav.Title }}">{{ $nav.Title }}</a>
                 {{end}}
